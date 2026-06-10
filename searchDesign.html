@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: transparent; }
+
+    .search-container {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      max-width: 600px;
+      position: relative;
+      margin: 10px auto;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 22px;
+      font-size: 16px;
+      border: 1px solid #dfe1e5;
+      border-radius: 24px 0 0 24px;
+      outline: none;
+      background-color: #fff;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    input[type="text"]:focus {
+      box-shadow: 0 1px 6px rgba(32,33,36,0.20);
+      border-color: rgba(223,225,229,0);
+    }
+
+    button {
+      padding: 14px 28px;
+      font-size: 16px;
+      border: 1px solid #dfe1e5;
+      background-color: #f8f9fa;
+      color: #3c4043;
+      cursor: pointer;
+      border-radius: 0 24px 24px 0;
+      border-left: none;
+      outline: none;
+      transition: background-color 0.1s, box-shadow 0.1s;
+    }
+    button:hover {
+      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+      background-color: #f1f3f4;
+    }
+  </style>
+</head>
+<body>
+<div class="search-container">
+  <input type="text" id="htmlInput" list="searchSuggestions" placeholder="Search by title..." autocomplete="off">
+  <button id="htmlButton">Search</button>
+  <datalist id="searchSuggestions"></datalist>
+</div>
+
+<script>
+  const inputField = document.getElementById('htmlInput');
+  const searchBtn = document.getElementById('htmlButton');
+  const datalist = document.getElementById('searchSuggestions');
+
+  let debounceTimer = null;
+
+
+  let currentSuggestions = [];
+
+  // Central search function
+  function triggerSearch(value) {
+    window.parent.postMessage({ type: 'search', value: value }, "*");
+  }
+
+  // Central typing/suggestion function
+  function triggerTyping(value) {
+    window.parent.postMessage({ type: 'typing', value: value }, "*");
+  }
+
+  inputField.addEventListener('input', (e) => {
+    const val = e.target.value;
+
+
+    triggerTyping(val);
+
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      triggerSearch(val);
+    }, 300);
+  });
+
+  inputField.addEventListener('change', (e) => {
+    const val = e.target.value;
+
+    if (currentSuggestions.includes(val)) {
+      clearTimeout(debounceTimer); 
+      triggerSearch(val);
+    }
+  });
+
+  // 3. Button click
+  searchBtn.addEventListener('click', () => {
+    clearTimeout(debounceTimer);
+    triggerSearch(inputField.value);
+  });
+
+  // 4. Enter key
+  inputField.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      clearTimeout(debounceTimer);
+      triggerSearch(inputField.value);
+    }
+  });
+
+
+  window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'updateSuggestions') {
+      currentSuggestions = event.data.titles;
+      datalist.innerHTML = '';
+      event.data.titles.forEach(title => {
+        const option = document.createElement('option');
+        option.value = title;
+        datalist.appendChild(option);
+      });
+    }
+  });
+</script>
+</body>
+</html>
